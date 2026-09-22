@@ -41,11 +41,21 @@ def get_sheet():
         "https://www.googleapis.com/auth/spreadsheets",
         "https://www.googleapis.com/auth/drive",
     ]
-    try:
-        creds = Credentials.from_service_account_file("credentials.json", scopes=scopes)
-    except FileNotFoundError:
-        st.error("credentials.json not found in project root. Check Step 17.")
-        st.stop()
+
+    # On Streamlit Cloud: read from st.secrets (no local file exists there).
+    # Locally: fall back to credentials.json on disk.
+    if "gcp_service_account" in st.secrets:
+        creds_dict = dict(st.secrets["gcp_service_account"])
+        creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
+    else:
+        try:
+            creds = Credentials.from_service_account_file("credentials.json", scopes=scopes)
+        except FileNotFoundError:
+            st.error(
+                "No Google credentials found. Locally: add credentials.json to the project root. "
+                "On Streamlit Cloud: add a [gcp_service_account] block under Secrets."
+            )
+            st.stop()
 
     client = gspread.authorize(creds)
     try:
